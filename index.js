@@ -14,7 +14,7 @@ function checkStatus(response) {
 
 var create_api = function(organizationID, siteID, segmentURL, dataSource, realTimeURL, channel, euroMsgApplicationKey, euroMsgSubscriptionURL, euroMsgRetentionURL, local) {
 
-	const sdkVersion = "1.0.18";
+	const sdkVersion = "1.0.20";
 	const euroSubscriptionKey = "subscription";
 
 	var api = {};
@@ -55,11 +55,10 @@ var create_api = function(organizationID, siteID, segmentURL, dataSource, realTi
 		}
 
 		if(data) { 
-			options["body"] = JSON.stringify(data); 
+			options["body"] = JSON.stringify(data);
 		}
-
 		fetch(url, options)
-			.then(d => { callback();})
+			.then(d => { callback(d);})
 			.catch(err => {
 				callback(err);
 			});
@@ -152,77 +151,103 @@ var create_api = function(organizationID, siteID, segmentURL, dataSource, realTi
 	api.euromsg = {
 		
 		setUser : function(user){
-			
 			if(user === undefined)
 				return;
-			
+				
 			AsyncStorage.getItem(euroSubscriptionKey).then(subscriptionString => {
 				var subscription = JSON.parse(subscriptionString);
+				
 				if(!subscription){
 					subscription = {};
 				}
+
+					// subscription["appVersion"] = isEmptyOrSpaces(subscription["appVersion"]) ? Constants.manifest.version : subscription["appVersion"];
+					subscription["appKey"] = api.euroMsgApplicationKey;
+					subscription["os"] = Platform.OS;
+					// subscription["deviceType"] = Constants.deviceName;
+					// subscription["deviceName"] = Constants.deviceName;
+					subscription["carrier"] = "";  //TODO: 
+					subscription["local"] = api.local;
+					subscription["identifierForVendor"] = Constants.deviceId;
+					subscription["advertisingIdentifier"] = ""; //TODO:
+					subscription["sdkVersion"] = sdkVersion;
+					subscription["firstTime"] = 1;
+					subscription["identifierForVendor"] = Constants.deviceId;
+
 				if(!subscription["extra"]){
 					subscription["extra"] = {};
 				}
 				
-				if(user["keyID"] !== undefined)
+				if(user["keyID"] != undefined)
 					subscription["extra"]["keyID"] = user["keyID"];
 					
-				if(user["email"] !== undefined)
+				if(user["email"] != undefined)
 					subscription["extra"]["email"] = user["email"];
-					
-				if(subscription["extra"]['pushPermit'] === undefined && user["pushPermit"] === undefined)
-					subscription["extra"]['pushPermit'] = 'Y';
-				if(subscription["extra"]['gsmPermit'] === undefined && user["gsmPermit"] === undefined)
-					subscription["extra"]['gsmPermit'] = 'Y';
-				if(subscription["extra"]['emailPermit'] === undefined && user["emailPermit"] === undefined)
-					subscription["extra"]['emailPermit'] = 'Y';	
 
+				if(user["token"] != undefined != user["token"] != null)
+					subscription["token"] = user["token"];
+					
+				if(user["pushPermit"] != undefined && user["pushPermit"] != null)
+					subscription["extra"]['pushPermit'] = user["pushPermit"]
+
+				if(user["gsmPermit"] != undefined && user["gsmPermit"] != null)
+					subscription["extra"]['gsmPermit'] = user["gsmPermit"]
+
+				if(user["emailPermit"] != undefined && user["emailPermit"] != null)
+					subscription["extra"]['emailPermit'] = user["emailPermit"]
+					
+				send(api.euroMsgSubscriptionURL, "POST", subscription, function() {});
 				AsyncStorage.setItem(euroSubscriptionKey, JSON.stringify(subscription));
 			});
 		},
 
-		subscribe: function(token) {
+		subscribe: function(token) {		
+			
 			AsyncStorage.getItem(euroSubscriptionKey).then(subscriptionString => {
 				var subscription = JSON.parse(subscriptionString);
-				if(!subscription){
-					subscription = {};
-				}
-				if(Constants.platform.ios !== undefined){
-					subscription["osVersion"] = Constants.platform.ios.systemVersion === undefined ? "" : Constants.platform.ios.systemVersion;
-				}
-				else if(Constants.platform.android !== undefined){
-					subscription["osVersion"] = Constants.platform.android.systemVersion === undefined ? "" : Constants.platform.android.systemVersion;
-				}
-				subscription["token"] = token;
-				subscription["appVersion"] = isEmptyOrSpaces(subscription["appVersion"]) ? Constants.manifest.version : subscription["appVersion"];
-				subscription["appKey"] = api.euroMsgApplicationKey;
-				subscription["os"] = Platform.OS;
-				subscription["deviceType"] = Constants.deviceName;
-				subscription["deviceName"] = Constants.deviceName;
-				subscription["carrier"] = "";  //TODO: 
-				subscription["local"] = api.local;
-				subscription["identifierForVendor"] = Constants.deviceId;
-				subscription["advertisingIdentifier"] = ""; //TODO:
-				subscription["sdkVersion"] = sdkVersion;
-				subscription["firstTime"] = 1;
-				subscription["identifierForVendor"] = Constants.deviceId;
-				if(subscription["extra"] === undefined)
-					subscription["extra"] = {};
-					
 				
-				
-				if(subscription["extra"]['pushPermit'] === undefined)
-					subscription["extra"]['pushPermit'] = 'Y';
-				if(subscription["extra"]['gsmPermit'] === undefined)
-                	subscription["extra"]['gsmPermit'] = 'Y';
-                if(subscription["extra"]['gsmPermit'] === undefined)	
-                	subscription["extra"]['gsmPermit'] = 'Y';
+				try {
 					
-				
+					if(!subscription){
+						subscription = {};
+					}
+
+					// if(Constants.platform.ios !== undefined){
+					// 	subscription["osVersion"] = Constants.platform.ios.systemVersion === undefined ? "" : Constants.platform.ios.systemVersion;
+					// }
+					// else if(Constants.platform.android !== undefined){
+					// 	subscription["osVersion"] = Constants.platform.android.systemVersion === undefined ? "" : Constants.platform.android.systemVersion;
+					// }
 					
-				send(api.euroMsgSubscriptionURL, "POST", subscription, function() {});
-				AsyncStorage.setItem(euroSubscriptionKey, JSON.stringify(subscription));
+					subscription["token"] = token;
+					// subscription["appVersion"] = isEmptyOrSpaces(subscription["appVersion"]) ? Constants.manifest.version : subscription["appVersion"];
+					subscription["appKey"] = api.euroMsgApplicationKey;
+					subscription["os"] = Platform.OS;
+					// subscription["deviceType"] = Constants.deviceName;
+					// subscription["deviceName"] = Constants.deviceName;
+					subscription["carrier"] = "";  //TODO: 
+					subscription["local"] = api.local;
+					subscription["identifierForVendor"] = Constants.deviceId;
+					subscription["advertisingIdentifier"] = ""; //TODO:
+					subscription["sdkVersion"] = sdkVersion;
+					subscription["firstTime"] = 1;
+					subscription["identifierForVendor"] = Constants.deviceId;
+					if(subscription["extra"] === undefined)
+						subscription["extra"] = {};
+					
+					if(subscription["extra"]['pushPermit'] !== undefined && subscription["extra"]['pushPermit'] !== null)
+						subscription["extra"]['pushPermit'] = subscription["extra"]['pushPermit'];
+
+					if(subscription["extra"]['gsmPermit'] !== undefined && subscription["extra"]['gsmPermit'] !== null)
+						subscription["extra"]['gsmPermit'] = subscription["extra"]['gsmPermit'];
+						
+					if(subscription["extra"]['emailPermit'] !== undefined && subscription["extra"]['emailPermit'] !== null)
+						subscription["extra"]['emailPermit'] = subscription["extra"]['emailPermit'];
+					
+					send(api.euroMsgSubscriptionURL, "POST", subscription, function() {});
+					AsyncStorage.setItem(euroSubscriptionKey, JSON.stringify(subscription));
+
+				} catch (error) { }	
 			});
 
 		},
